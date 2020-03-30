@@ -1,0 +1,98 @@
+## 1. Testing quality of predictions ##
+
+import pandas as pd
+import numpy as np
+
+dc_listings = pd.read_csv("dc_airbnb.csv")
+stripped_commas = dc_listings['price'].str.replace(',', '')
+stripped_dollars = stripped_commas.str.replace('$', '')
+dc_listings['price'] = stripped_dollars.astype('float')
+train_df = dc_listings.iloc[0:2792]
+test_df = dc_listings.iloc[2792:]
+
+def predict_price(new_listing):
+    #print("new_listing=",new_listing)
+    ## DataFrame.copy() performs a deep copy
+    temp_df = train_df.copy()
+    temp_df['distance'] = temp_df['accommodates'].apply(lambda x: np.abs(x - new_listing))
+    temp_df = temp_df.sort_values('distance')
+    nearest_neighbor_prices = temp_df.iloc[0:5]['price']
+    predicted_price = nearest_neighbor_prices.mean()
+    return(predicted_price)
+
+
+test_df['predicted_price'] = test_df['accommodates'].apply(predict_price)
+
+## 2. Error Metrics ##
+
+import numpy as np
+print(test_df['predicted_price'].head(), test_df['price'].head())
+absolute_diff = np.absolute(test_df['predicted_price'] - test_df['price'])
+mae = absolute_diff.mean()
+
+## 3. Mean Squared Error ##
+
+#square of differences
+squared_differece = absolute_diff**2
+
+#mean value of the differences for all the rows
+mse = squared_differece.mean()
+
+## 4. Training another model ##
+
+train_df = dc_listings.iloc[0:2792]
+test_df = dc_listings.iloc[2792:]
+
+def predict_price(new_listing):
+    temp_df = train_df.copy()
+    temp_df['distance'] = temp_df['bathrooms'].apply(lambda x: np.abs(x - new_listing))
+    temp_df = temp_df.sort_values('distance')
+    nearest_neighbors_prices = temp_df.iloc[0:5]['price']
+    predicted_price = nearest_neighbors_prices.mean()
+    return(predicted_price)
+
+'''Apply the function to test_df and assign the resulting Series object containing the predicted price values to the predicted_price column in test_df'''
+
+test_df['predict_price']  = test_df['bathrooms'].apply(predict_price)
+
+'''Calculate the squared error between the price and predicted_price columns in test_df and assign the resulting Series object to the squared_error column in test_df.'''
+
+test_df['squared_error'] = (test_df['predict_price'] - test_df['price'])**2
+
+#mean of squared error
+mse = test_df['squared_error'].mean()
+
+## 5. Root Mean Squared Error ##
+
+import math
+def predict_price(new_listing):
+    temp_df = train_df.copy()
+    temp_df['distance'] = temp_df['bathrooms'].apply(lambda x: np.abs(x - new_listing))
+    temp_df = temp_df.sort_values('distance')
+    nearest_neighbors_prices = temp_df.iloc[0:5]['price']
+    predicted_price = nearest_neighbors_prices.mean()
+    return(predicted_price)
+
+test_df['predicted_price'] = test_df['bathrooms'].apply(lambda x: predict_price(x))
+test_df['squared_error'] = (test_df['predicted_price'] - test_df['price'])**(2)
+mse = test_df['squared_error'].mean()
+rmse = math.sqrt(mse)
+
+## 6. Comparing MAE and RMSE ##
+
+import math
+
+errors_one = pd.Series([5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10])
+errors_two = pd.Series([5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 1000])
+
+#Calculate the MAE for errors_one
+mae_one = errors_one.mean()
+
+#Calculate the RMSE for errors_one
+rmse_one = math.sqrt((errors_one**2).mean())
+
+#Calculate the MAE for errors_two
+mae_two = errors_two.mean()
+
+#Calculate the RMSE for errors_two
+rmse_two = math.sqrt((errors_two**2).mean())
