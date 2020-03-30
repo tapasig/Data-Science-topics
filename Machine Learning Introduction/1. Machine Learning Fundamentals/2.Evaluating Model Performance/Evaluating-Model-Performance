@@ -1,0 +1,195 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Testing quality of predictions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## 1. Testing quality of predictions ##\n",
+    "\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "\n",
+    "dc_listings = pd.read_csv(\"dc_airbnb.csv\")\n",
+    "stripped_commas = dc_listings['price'].str.replace(',', '')\n",
+    "stripped_dollars = stripped_commas.str.replace('$', '')\n",
+    "dc_listings['price'] = stripped_dollars.astype('float')\n",
+    "train_df = dc_listings.iloc[0:2792]\n",
+    "test_df = dc_listings.iloc[2792:]\n",
+    "\n",
+    "def predict_price(new_listing):\n",
+    "    #print(\"new_listing=\",new_listing)\n",
+    "    ## DataFrame.copy() performs a deep copy\n",
+    "    temp_df = train_df.copy()\n",
+    "    temp_df['distance'] = temp_df['accommodates'].apply(lambda x: np.abs(x - new_listing))\n",
+    "    temp_df = temp_df.sort_values('distance')\n",
+    "    nearest_neighbor_prices = temp_df.iloc[0:5]['price']\n",
+    "    predicted_price = nearest_neighbor_prices.mean()\n",
+    "    return(predicted_price)\n",
+    "\n",
+    "\n",
+    "test_df['predicted_price'] = test_df['accommodates'].apply(predict_price)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Error in prediction"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## 2. Error Metrics ##\n",
+    "\n",
+    "import numpy as np\n",
+    "print(test_df['predicted_price'].head(), test_df['price'].head())\n",
+    "absolute_diff = np.absolute(test_df['predicted_price'] - test_df['price'])\n",
+    "mae = absolute_diff.mean()\n",
+    "\n",
+    "## 3. Mean Squared Error ##\n",
+    "\n",
+    "#square of differences\n",
+    "squared_differece = absolute_diff**2\n",
+    "\n",
+    "#mean value of the differences for all the rows\n",
+    "mse = squared_differece.mean()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Devide the data to train and test"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## 4. Training another model ##\n",
+    "\n",
+    "train_df = dc_listings.iloc[0:2792]\n",
+    "test_df = dc_listings.iloc[2792:]\n",
+    "\n",
+    "def predict_price(new_listing):\n",
+    "    temp_df = train_df.copy()\n",
+    "    temp_df['distance'] = temp_df['bathrooms'].apply(lambda x: np.abs(x - new_listing))\n",
+    "    temp_df = temp_df.sort_values('distance')\n",
+    "    nearest_neighbors_prices = temp_df.iloc[0:5]['price']\n",
+    "    predicted_price = nearest_neighbors_prices.mean()\n",
+    "    return(predicted_price)\n",
+    "\n",
+    "'''Apply the function to test_df and assign the resulting Series object containing the predicted price values to the predicted_price column in test_df'''\n",
+    "\n",
+    "test_df['predict_price']  = test_df['bathrooms'].apply(predict_price)\n",
+    "\n",
+    "'''Calculate the squared error between the price and predicted_price columns in test_df and assign the resulting Series object to the squared_error column in test_df.'''\n",
+    "\n",
+    "test_df['squared_error'] = (test_df['predict_price'] - test_df['price'])**2\n",
+    "\n",
+    "#mean of squared error\n",
+    "mse = test_df['squared_error'].mean()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Calculate RMSE"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## 5. Root Mean Squared Error ##\n",
+    "\n",
+    "import math\n",
+    "def predict_price(new_listing):\n",
+    "    temp_df = train_df.copy()\n",
+    "    temp_df['distance'] = temp_df['bathrooms'].apply(lambda x: np.abs(x - new_listing))\n",
+    "    temp_df = temp_df.sort_values('distance')\n",
+    "    nearest_neighbors_prices = temp_df.iloc[0:5]['price']\n",
+    "    predicted_price = nearest_neighbors_prices.mean()\n",
+    "    return(predicted_price)\n",
+    "\n",
+    "test_df['predicted_price'] = test_df['bathrooms'].apply(lambda x: predict_price(x))\n",
+    "test_df['squared_error'] = (test_df['predicted_price'] - test_df['price'])**(2)\n",
+    "mse = test_df['squared_error'].mean()\n",
+    "rmse = math.sqrt(mse)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Compare MAE and RMSE"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "## 6. Comparing MAE and RMSE ##\n",
+    "\n",
+    "import math\n",
+    "\n",
+    "errors_one = pd.Series([5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10])\n",
+    "errors_two = pd.Series([5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 10, 5, 1000])\n",
+    "\n",
+    "#Calculate the MAE for errors_one\n",
+    "mae_one = errors_one.mean()\n",
+    "\n",
+    "#Calculate the RMSE for errors_one\n",
+    "rmse_one = math.sqrt((errors_one**2).mean())\n",
+    "\n",
+    "#Calculate the MAE for errors_two\n",
+    "mae_two = errors_two.mean()\n",
+    "\n",
+    "#Calculate the RMSE for errors_two\n",
+    "rmse_two = math.sqrt((errors_two**2).mean())"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
